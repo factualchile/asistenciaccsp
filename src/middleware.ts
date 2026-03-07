@@ -20,10 +20,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/dashboard/:path*',
-        '/ausencias/:path*',
-        '/reportes/:path*',
-        '/config/:path*',
-        '/login'
+        '/((?!api|_next/static|_next/image|favicon.ico|login).*)',
     ],
 }
