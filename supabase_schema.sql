@@ -1,7 +1,7 @@
 -- Esquema SQL para Asistencia CCSP
 
 -- 1. Tabla de Profesores
-CREATE TABLE profesores (
+CREATE TABLE IF NOT EXISTS profesores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre TEXT NOT NULL,
     asignatura TEXT NOT NULL,
@@ -10,14 +10,14 @@ CREATE TABLE profesores (
 );
 
 -- 2. Tabla de Cursos
-CREATE TABLE cursos (
+CREATE TABLE IF NOT EXISTS cursos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre_curso TEXT NOT NULL UNIQUE, -- Ej: 7°A, 8°B
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 3. Tabla de Bloques
-CREATE TABLE bloques (
+CREATE TABLE IF NOT EXISTS bloques (
     id SMALLINT PRIMARY KEY, -- 1, 2, 3...
     numero SMALLINT NOT NULL,
     hora_inicio TIME NOT NULL,
@@ -25,7 +25,7 @@ CREATE TABLE bloques (
 );
 
 -- 4. Tabla de Horarios Docentes
-CREATE TABLE horarios (
+CREATE TABLE IF NOT EXISTS horarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     profesor_id UUID REFERENCES profesores(id) ON DELETE CASCADE,
     curso_id UUID REFERENCES cursos(id) ON DELETE CASCADE,
@@ -35,9 +35,14 @@ CREATE TABLE horarios (
 );
 
 -- 5. Tabla de Ausencias
-CREATE TYPE tipo_ausencia_enum AS ENUM ('DIA_COMPLETO', 'BLOQUES_ESPECIFICOS');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_ausencia_enum') THEN
+        CREATE TYPE tipo_ausencia_enum AS ENUM ('DIA_COMPLETO', 'BLOQUES_ESPECIFICOS');
+    END IF;
+END $$;
 
-CREATE TABLE ausencias (
+CREATE TABLE IF NOT EXISTS ausencias (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     fecha DATE NOT NULL,
     profesor_id UUID REFERENCES profesores(id) ON DELETE CASCADE,
