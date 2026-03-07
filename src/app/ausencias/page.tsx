@@ -48,10 +48,41 @@ export default function AusenciasPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!formData.profesor_id) {
+            alert('Por favor selecciona un profesor')
+            return
+        }
+
         setLoading(true)
 
-        // Aquí iría la lógica de guardado en Supabase
-        alert('Registro guardado correctamente (Simulado)')
+        const { data, error } = await supabase
+            .from('ausencias')
+            .insert([{
+                fecha: formData.fecha,
+                profesor_id: formData.profesor_id,
+                tipo_ausencia: formData.tipo_ausencia,
+                bloques_afectados: formData.tipo_ausencia === 'BLOQUES_ESPECIFICOS' ? formData.bloques_afectados : null,
+                reemplazo: formData.reemplazo,
+                profesor_reemplazo: formData.reemplazo ? formData.profesor_reemplazo : null,
+                motivo: formData.motivo
+            }])
+
+        if (error) {
+            console.error('Error al guardar:', error)
+            alert('Hubo un error al guardar el registro.')
+        } else {
+            alert('Registro guardado correctamente en la base de datos.')
+            // Resetear formulario
+            setFormData({
+                fecha: new Date().toISOString().split('T')[0],
+                profesor_id: '',
+                tipo_ausencia: 'BLOQUES_ESPECIFICOS',
+                bloques_afectados: [],
+                reemplazo: false,
+                profesor_reemplazo: '',
+                motivo: ''
+            })
+        }
         setLoading(false)
     }
 
