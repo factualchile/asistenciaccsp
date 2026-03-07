@@ -63,4 +63,7 @@ INSERT INTO bloques (id, numero, hora_inicio, hora_fin) VALUES
 (5, 5, '11:30', '12:15'),
 (6, 6, '12:15', '13:00'),
 (7, 7, '13:15', '14:00'),
-(8, 8, '14:00', '14:45');
+(8, 8, '14:00', '14:45')
+ON CONFLICT (id) DO UPDATE SET 
+    hora_inicio = EXCLUDED.hora_inicio,
+    hora_fin = EXCLUDED.hora_fin;
