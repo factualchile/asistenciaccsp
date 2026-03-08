@@ -20,15 +20,30 @@ export default function AusenciasPage() {
 
     useEffect(() => {
         async function loadData() {
-            const [pRes, bRes] = await Promise.all([
-                supabase.from('profesores').select('id, nombre').order('nombre'),
-                supabase.from('bloques').select('*').order('id')
-            ])
-            if (pRes.data) setProfesores(pRes.data)
-            if (bRes.data) setBloques(bRes.data.map(b => ({
-                id: b.id,
-                label: `Bloque ${b.numero}: ${b.hora_inicio.slice(0, 5)} - ${b.hora_fin.slice(0, 5)}`
-            })))
+            try {
+                const [pRes, bRes] = await Promise.all([
+                    supabase.from('profesores').select('id, nombre').order('nombre'),
+                    supabase.from('bloques').select('*').order('id')
+                ])
+
+                if (pRes.error) throw pRes.error
+                if (bRes.error) throw bRes.error
+
+                if (pRes.data) {
+                    console.log('Profesores cargados:', pRes.data.length)
+                    setProfesores(pRes.data)
+                }
+
+                if (bRes.data) {
+                    console.log('Bloques cargados:', bRes.data.length)
+                    setBloques(bRes.data.map(b => ({
+                        id: b.id,
+                        label: `Bloque ${b.numero}: ${b.hora_inicio.slice(0, 5)} - ${b.hora_fin.slice(0, 5)}`
+                    })))
+                }
+            } catch (err) {
+                console.error('Error al cargar datos básicos:', err)
+            }
         }
         loadData()
     }, [])
@@ -105,7 +120,7 @@ export default function AusenciasPage() {
 
             <form onSubmit={handleSubmit} className="card grid" style={{ gap: '1.5rem' }}>
                 <div className="form-group">
-                    <label>Fecha</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Fecha</label>
                     <input
                         type="date"
                         className="input"
@@ -116,28 +131,24 @@ export default function AusenciasPage() {
                 </div>
 
                 <div className="form-group">
-                    <label>Profesor</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Profesor</label>
                     <select
                         className="input"
                         value={formData.profesor_id}
                         onChange={e => setFormData({ ...formData, profesor_id: e.target.value })}
                         required
                     >
-                        <option value="">Seleccione un profesor...</option>
-                        {profesores.length > 0 ? (
-                            profesores.map(p => (
-                                <option key={p.id} value={p.id}>{p.nombre}</option>
-                            ))
-                        ) : (
-                            <option value="1">Ejemplo: Macarena Yacoman</option>
-                        )}
+                        <option value="">{profesores.length === 0 ? 'Cargando profesores...' : 'Seleccione un profesor...'}</option>
+                        {profesores.map(p => (
+                            <option key={p.id} value={p.id}>{p.nombre}</option>
+                        ))}
                     </select>
                 </div>
 
                 <div className="form-group">
-                    <label>Tipo de Ausencia</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Tipo de Ausencia</label>
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                        <label className="radio-label">
+                        <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                             <input
                                 type="radio"
                                 name="tipo"
@@ -145,7 +156,7 @@ export default function AusenciasPage() {
                                 onChange={() => setFormData({ ...formData, tipo_ausencia: 'DIA_COMPLETO' })}
                             /> Día Completo
                         </label>
-                        <label className="radio-label">
+                        <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                             <input
                                 type="radio"
                                 name="tipo"
@@ -158,7 +169,7 @@ export default function AusenciasPage() {
 
                 {formData.tipo_ausencia === 'BLOQUES_ESPECIFICOS' && (
                     <div className="form-group">
-                        <label>Seleccionar Bloques</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Seleccionar Bloques</label>
                         <div className="bloques-grid">
                             {bloques.map(b => (
                                 <button
@@ -188,7 +199,7 @@ export default function AusenciasPage() {
 
                 {formData.reemplazo && (
                     <div className="form-group">
-                        <label>Nombre del Reemplazante</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Nombre del Reemplazante</label>
                         <input
                             type="text"
                             className="input"
@@ -200,7 +211,7 @@ export default function AusenciasPage() {
                 )}
 
                 <div className="form-group">
-                    <label>Motivo (Opcional)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Motivo (Opcional)</label>
                     <textarea
                         className="input"
                         rows={3}
@@ -213,43 +224,6 @@ export default function AusenciasPage() {
                     {loading ? 'Guardando...' : 'Confirmar Registro'}
                 </button>
             </form>
-
-            <style jsx>{`
-        .form-group label {
-          display: block;
-          margin-bottom: 0.5rem;
-          font-weight: 500;
-        }
-        .radio-label {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          cursor: pointer;
-        }
-        .bloques-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 0.5rem;
-          margin-top: 0.5rem;
-        }
-        .bloque-btn {
-          padding: 0.75rem;
-          border: 1px solid var(--border);
-          border-radius: 8px;
-          text-align: left;
-          font-size: 0.875rem;
-          background: var(--bg-card);
-          transition: all 0.2s;
-        }
-        .bloque-btn.active {
-          background: var(--primary);
-          color: white;
-          border-color: var(--primary);
-        }
-        @media (max-width: 600px) {
-          .bloques-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
         </div>
     )
 }
