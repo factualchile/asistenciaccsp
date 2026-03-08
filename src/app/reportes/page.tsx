@@ -13,12 +13,16 @@ export default function ReportesPage() {
     const [loading, setLoading] = useState(false)
     const [periodo, setPeriodo] = useState('30')
 
+    const [searchTerm, setSearchTerm] = useState('')
+    const [page, setPage] = useState(1)
+    const itemsPerPage = 10
+
     const fetchReport = async () => {
         setLoading(true)
         const { data } = await supabase
             .from('ausencias')
             .select('*, profesores(nombre)')
-            .limit(50)
+            .order('fecha', { ascending: false })
         if (data) setReportData(data)
         setLoading(false)
     }
@@ -26,6 +30,16 @@ export default function ReportesPage() {
     useEffect(() => {
         fetchReport()
     }, [])
+
+    const filteredData = reportData.filter(a =>
+        a.profesores?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.motivo?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const paginatedData = filteredData.slice(
+        (page - 1) * itemsPerPage,
+        page * itemsPerPage
+    )
 
     const exportPDF = () => {
         const doc = new jsPDF()
@@ -89,6 +103,16 @@ export default function ReportesPage() {
                 </div>
             </header>
 
+            <div style={{ marginBottom: '1.5rem' }}>
+                <input
+                    type="text"
+                    className="input"
+                    placeholder="🔍 Buscar por profesor o motivo..."
+                    value={searchTerm}
+                    onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                />
+            </div>
+
             <div className="card" id="report-table">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
@@ -101,7 +125,7 @@ export default function ReportesPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {reportData.map(a => (
+                        {paginatedData.map(a => (
                             <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '1rem' }}>{formatFecha(a.fecha)}</td>
                                 <td style={{ padding: '1rem', fontWeight: 600 }}>{a.profesores?.nombre}</td>
@@ -112,6 +136,28 @@ export default function ReportesPage() {
                         ))}
                     </tbody>
                 </table>
+
+                {filteredData.length > itemsPerPage && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem', padding: '1rem' }}>
+                        <button
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="btn"
+                            style={{ fontSize: '0.875rem', border: '1px solid var(--border)' }}
+                        >
+                            Anterior
+                        </button>
+                        <span style={{ alignSelf: 'center', fontSize: '0.875rem' }}>Página {page}</span>
+                        <button
+                            onClick={() => setPage(p => p + 1)}
+                            disabled={page * itemsPerPage >= filteredData.length}
+                            className="btn"
+                            style={{ fontSize: '0.875rem', border: '1px solid var(--border)' }}
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )

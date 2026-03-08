@@ -51,6 +51,20 @@ export default function AusenciasPage() {
 
         setLoading(true)
 
+        // Verificación de duplicidad
+        const { data: existing, error: checkError } = await supabase
+            .from('ausencias')
+            .select('id')
+            .eq('fecha', formData.fecha)
+            .eq('profesor_id', formData.profesor_id)
+            .maybeSingle()
+
+        if (existing) {
+            alert('¡Atención! Ya existe un registro de ausencia para este profesor en la fecha seleccionada. Por favor verifica los reportes.')
+            setLoading(false)
+            return
+        }
+
         const { data, error } = await supabase
             .from('ausencias')
             .insert([{

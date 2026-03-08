@@ -72,7 +72,61 @@ CREATE TABLE IF NOT EXISTS configuracion (
     CHECK (id = 1)
 );
 
--- Insertar configuración inicial si no existe
-INSERT INTO configuracion (id, clave_acceso) 
-VALUES (1, 'ccsp2026!') 
-ON CONFLICT (id) DO NOTHING;
+-- 7. Función para cálculo preciso de horas perdidas
+CREATE OR REPLACE FUNCTION calcular_horas_perdidas(
+    p_fecha_inicio DATE,
+    p_fecha_fin DATE,
+    p_profesor_id UUID DEFAULT NULL,
+    p_curso_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+    total_horas_perdidas BIGINT,
+    total_ausencias BIGINT,
+    profesores_unicos BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH ausencias_base as (
+            SELECT 
+                a.id,
+                a.fecha,
+                a.profesor_id,
+                a.tipo_ausencia,
+                a.bloques_afectados,
+                a.reemplazo,
+                EXTRACT(DOW FROM a.fecha) as dia_semana_raw
+            FROM ausencias a
+            WHERE a.fecha >= p_fecha_inicio 
+              AND a.fecha <= p_fecha_fin
+              AND (p_profesor_id IS NULL OR a.profesor_id = p_profesor_id)
+        ),
+        -- Ajustamos el día de la semana (DOW: 0=Domingo, 1=Lunes... en JS; en PG: 0=Domingo)
+        -- Nuestro sistema usa 1=Lunes... 5=Viernes
+        ausencias_dia as (
+            SELECT *,
+            CASE 
+                WHEN dia_semana_raw = 0 THEN 7 -- Domingo (no debería haber)
+                ELSE dia_semana_raw::SMALLINT
+            END as dia_semana
+            FROM ausencias_base
+        ),
+        -- Cruzamos con los horarios según el tipo de ausencia
+        bloques_perdidos AS (
+            SELECT 
+                ad.id as ausencia_id,
+                h.bloque_id
+            FROM ausencias_dia ad
+            JOIN horarios h ON ad.profesor_id = h.profesor_id AND ad.dia_semana = h.dia_semana
+            WHERE 
+                (ad.tipo_ausencia = 'DIA_COMPLETO' OR h.bloque_id = ANY(ad.bloques_afectados))
+                AND ad.reemplazo = FALSE -- Solo horas perdidas (sin reemplazo)
+                AND (p_curso_id IS NULL OR h.curso_id = p_curso_id)
+        )
+        SELECT 
+            COUNT(DISTINCT bp.ausencia_id || '-' || bp.bloque_id) as total_h,
+            COUNT(DISTINCT ad.id) as total_a,
+            COUNT(DISTINCT ad.profesor_id) as prof_u
+        FROM ausencias_dia ad
+        LEFT JOIN bloques_perdidos bp ON ad.id = bp.ausencia_id;
+END;
+$$ LANGUAGE plpgsql;

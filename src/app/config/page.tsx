@@ -9,9 +9,22 @@ export default function ConfigPage() {
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState({ type: '', text: '' })
 
+    const [searchTerm, setSearchTerm] = useState('')
+    const [page, setPage] = useState(1)
+    const itemsPerPage = 10
+
     useEffect(() => {
         fetchProfesores()
     }, [])
+
+    const filteredProfesores = profesores.filter(p =>
+        p.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const paginatedProfesores = filteredProfesores.slice(
+        (page - 1) * itemsPerPage,
+        page * itemsPerPage
+    )
 
     async function fetchProfesores() {
         const { data } = await supabase.from('profesores').select('*').order('nombre')
@@ -85,9 +98,20 @@ export default function ConfigPage() {
                 </section>
 
                 <section className="card">
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Gestión de Profesores</h2>
+                    <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem' }}>Gestión de Profesores</h2>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="🔍 Buscar profesor..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                        />
+                    </div>
+
                     <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {profesores.map(p => (
+                        {paginatedProfesores.map(p => (
                             <div key={p.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
                                 <input
                                     type="text"
@@ -106,6 +130,26 @@ export default function ConfigPage() {
                             </div>
                         ))}
                     </div>
+
+                    {filteredProfesores.length > itemsPerPage && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                style={{ fontSize: '0.875rem', color: page === 1 ? 'var(--text-muted)' : 'var(--primary)' }}
+                            >
+                                Anterior
+                            </button>
+                            <span style={{ fontSize: '0.875rem' }}>Página {page}</span>
+                            <button
+                                onClick={() => setPage(p => p + 1)}
+                                disabled={page * itemsPerPage >= filteredProfesores.length}
+                                style={{ fontSize: '0.875rem', color: page * itemsPerPage >= filteredProfesores.length ? 'var(--text-muted)' : 'var(--primary)' }}
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    )}
                 </section>
             </div>
         </div>

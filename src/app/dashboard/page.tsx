@@ -42,28 +42,20 @@ export default function Dashboard() {
         const now = new Date()
         const startDate = subDays(now, parseInt(filter.periodo))
 
-        // Consulta de ausencias reales en el periodo
-        let query = supabase
-            .from('ausencias')
-            .select(`
-        *,
-        profesores(nombre)
-      `)
-            .gte('fecha', formatISO(startDate, { representation: 'date' }))
-            .lte('fecha', formatISO(now, { representation: 'date' }))
+        const { data, error } = await supabase.rpc('calcular_horas_perdidas', {
+            p_fecha_inicio: formatISO(startDate, { representation: 'date' }),
+            p_fecha_fin: formatISO(now, { representation: 'date' }),
+            p_profesor_id: filter.profesor_id || null,
+            p_curso_id: filter.curso_id || null
+        })
 
-        if (filter.profesor_id) query = query.eq('profesor_id', filter.profesor_id)
-
-        const { data: ausencias, error } = await query
-
-        if (ausencias) {
-            // Cálculo de estadísticas (Simplificado para el ejemplo, requiere lógica cruzada con horarios)
-            // Nota: En una app real, esto podría ser una RPC en Postgres para mayor eficiencia
+        if (data && data.length > 0) {
+            const result = data[0]
             setStats({
-                ausenciasHoy: ausencias.filter(a => a.fecha === formatISO(now, { representation: 'date' })).length,
-                horasPerdidasHoy: 0, // Requiere cruce con horarios
-                profesoresAusentesHoy: new Set(ausencias.map(a => a.profesor_id)).size,
-                totalHorasPeriodo: ausencias.length * 3 // Estimación base (3 bloques por ausencia promedio)
+                ausenciasHoy: Number(result.total_ausencias),
+                horasPerdidasHoy: 0,
+                profesoresAusentesHoy: Number(result.profesores_unicos),
+                totalHorasPeriodo: Number(result.total_horas_perdidas)
             })
         }
         setLoading(false)
@@ -128,10 +120,14 @@ export default function Dashboard() {
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{formatFecha(new Date())}</div>
                 </div>
 
-                <div className="card">
+                <div className={`card ${stats.totalHorasPeriodo > 10 ? 'card-critical' : ''}`}>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Horas Perdidas Período</span>
-                    <h2 style={{ fontSize: '2.5rem', margin: '0.5rem 0' }}>{stats.totalHorasPeriodo}</h2>
-                    <div style={{ color: 'var(--error)', fontWeight: 600, fontSize: '0.875rem' }}>Sin reemplazo</div>
+                    <h2 style={{ fontSize: '2.5rem', margin: '0.5rem 0', color: stats.totalHorasPeriodo > 10 ? 'var(--error)' : 'inherit' }}>
+                        {stats.totalHorasPeriodo}
+                    </h2>
+                    <div style={{ color: stats.totalHorasPeriodo > 10 ? 'var(--error)' : 'var(--text-muted)', fontWeight: 600, fontSize: '0.875rem' }}>
+                        {stats.totalHorasPeriodo > 10 ? '¡ALERTA DE IMPACTO!' : 'Sin reemplazo'}
+                    </div>
                 </div>
 
                 <div className="card">
