@@ -26,6 +26,21 @@ export default function Dashboard() {
     useEffect(() => {
         loadBaseData()
         fetchStats()
+
+        // Suscripción en tiempo real a la tabla de ausencias
+        const channel = supabase
+            .channel('dashboard-updates')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'ausencias' },
+                () => {
+                    fetchStats()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [filter])
 
     async function loadBaseData() {
