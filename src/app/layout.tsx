@@ -17,42 +17,52 @@ export default function RootLayout({
   const isLoginPage = pathname === '/login/' || pathname === '/login'
 
   useEffect(() => {
-    const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth_token='))
+    // Pequeño delay para que el cliente tome control
+    const checkAuth = () => {
+      const authCookie = document.cookie.split('; ').find(row => row.startsWith('auth_token='))
 
-    if (!authCookie && !isLoginPage) {
-      router.push('/login')
-    } else if (authCookie && isLoginPage) {
-      router.push('/dashboard')
-    } else {
-      setIsAuthorized(true)
+      if (!authCookie && !isLoginPage) {
+        router.push('/login/')
+      } else if (authCookie && isLoginPage) {
+        router.push('/dashboard/')
+      } else {
+        setIsAuthorized(true)
+      }
+      setLoading(false)
     }
-    setLoading(false)
-  }, [pathname, router])
 
-  if (loading) return null // Evitar flash de contenido
+    checkAuth()
+  }, [pathname, router, isLoginPage])
 
   return (
     <html lang="es">
       <body>
-        <div className="layout-wrapper">
-          {(!isLoginPage && isAuthorized) && (
-            <aside className="sidebar">
-              <div className="sidebar-logo">
-                <h1>CCSP</h1>
-                <span>Asistencia</span>
-              </div>
-              <nav className="sidebar-nav">
-                <a href="/dashboard/" className="nav-item">Dashboard</a>
-                <a href="/ausencias/" className="nav-item">Registrar Ausencia</a>
-                <a href="/reportes/" className="nav-item">Reportes</a>
-                <a href="/config/" className="nav-item">Configuración</a>
-              </nav>
-            </aside>
-          )}
-          <main className="content">
-            {children}
-          </main>
-        </div>
+        {!loading && (
+          <div className="layout-wrapper">
+            {(!isLoginPage && isAuthorized) && (
+              <aside className="sidebar">
+                <div className="sidebar-logo">
+                  <h1>CCSP</h1>
+                  <span>Asistencia</span>
+                </div>
+                <nav className="sidebar-nav">
+                  <a href="/dashboard/" className="nav-item">Dashboard</a>
+                  <a href="/ausencias/" className="nav-item">Registrar Ausencia</a>
+                  <a href="/reportes/" className="nav-item">Reportes</a>
+                  <a href="/config/" className="nav-item">Configuración</a>
+                </nav>
+              </aside>
+            )}
+            <main className="content">
+              {children}
+            </main>
+          </div>
+        )}
+        {loading && (
+          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white' }}>
+            Cargando...
+          </div>
+        )}
       </body>
     </html>
   )
