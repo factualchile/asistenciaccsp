@@ -64,13 +64,19 @@ INSERT INTO bloques (id, numero, hora_inicio, hora_fin) VALUES
 (6, 6, '12:15', '13:00'),
 (7, 7, '13:15', '14:00'),
 (8, 8, '14:00', '14:45')
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO NOTHING;
+
 -- 6. Tabla de Configuración Global
 CREATE TABLE IF NOT EXISTS configuracion (
     id SMALLINT PRIMARY KEY DEFAULT 1,
     clave_acceso TEXT NOT NULL DEFAULT 'ccsp2026!',
     CHECK (id = 1)
 );
+
+-- Insertar configuración inicial
+INSERT INTO configuracion (id, clave_acceso) 
+VALUES (1, 'ccsp2026!') 
+ON CONFLICT (id) DO NOTHING;
 
 -- 7. Función para cálculo preciso de horas perdidas
 CREATE OR REPLACE FUNCTION calcular_horas_perdidas(
