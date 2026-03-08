@@ -16,25 +16,21 @@ export default function AusenciasPage() {
         motivo: ''
     })
 
-    // Bloques de ejemplo (esto debería venir de la DB)
-    const bloques = [
-        { id: 1, label: 'Bloque 1: 08:00 - 08:45' },
-        { id: 2, label: 'Bloque 2: 08:45 - 09:30' },
-        { id: 3, label: 'Bloque 3: 09:45 - 10:30' },
-        { id: 4, label: 'Bloque 4: 10:30 - 11:15' },
-        { id: 5, label: 'Bloque 5: 11:30 - 12:15' },
-        { id: 6, label: 'Bloque 6: 12:15 - 13:00' },
-        { id: 7, label: 'Bloque 7: 14:00 - 14:45' },
-        { id: 8, label: 'Bloque 8: 14:45 - 15:30' },
-    ]
+    const [bloques, setBloques] = useState<any[]>([])
 
     useEffect(() => {
-        // Cargar profesores para el select
-        async function loadProfesores() {
-            const { data } = await supabase.from('profesores').select('id, nombre')
-            if (data) setProfesores(data)
+        async function loadData() {
+            const [pRes, bRes] = await Promise.all([
+                supabase.from('profesores').select('id, nombre').order('nombre'),
+                supabase.from('bloques').select('*').order('id')
+            ])
+            if (pRes.data) setProfesores(pRes.data)
+            if (bRes.data) setBloques(bRes.data.map(b => ({
+                id: b.id,
+                label: `Bloque ${b.numero}: ${b.hora_inicio.slice(0, 5)} - ${b.hora_fin.slice(0, 5)}`
+            })))
         }
-        loadProfesores()
+        loadData()
     }, [])
 
     const handleBloqueToggle = (id: number) => {
